@@ -71,6 +71,19 @@ class Model:
     def get_table_values(self):
         return self.data.values()
 
+    def find_subscription(self, name:str, ret:bool=False) -> Subscription|bool:
+        hash_value = self.index.get(name)
+
+        print(self.index)
+
+        if hash_value and ret:
+            return self.data[hash_value]
+
+        if hash_value != None:
+            return True
+
+        return False
+
     def add_subscription(self, name:str, expense:float, duration:Literal["daily", "monthly", "yearly"]):
         if name in self.index:
             raise SubscriptionExists(f"Subscription with name ({name}) already exists")
@@ -104,7 +117,7 @@ class Model:
     def make_index(data:dict[int, Subscription]) -> dict[str, int]:
         buffer = {}
         for hash, subscription in data.items():
-            buffer.update({hash:subscription.name})
+            buffer.update({subscription.name:hash})
 
         return buffer
 
@@ -116,7 +129,10 @@ class Model:
         if duration == "yearly":
             return expense / 12
 
-        return expense
+        if duration == "monthly":
+            return expense
+
+        raise TypeError("duration parameter can only take the following values: daily, monthly, yearly")
 
     @staticmethod
     def read_data(file_path:Path) -> dict[int, Subscription]:
