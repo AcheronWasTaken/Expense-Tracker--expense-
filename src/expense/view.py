@@ -4,6 +4,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.live import Live
 from keyboard import read_event
+from rich.columns import Columns
 
 class ModelInterface:
     def __init__(self, model:Model):
@@ -53,17 +54,13 @@ class ModelInterface:
         )
 
         for stat_name, stat_value in self.model.statistics.items():
-            name = Text(stat_name, style="yellow")
+            name = Text(stat_name.title() + ":  ", style="yellow")
             value = str(stat_value)
 
             statistics_table.add_row(name, value)
 
-        layout = Layout()
-        layout.split_row(
-            Layout(model_table, name="model"),
-            Layout(statistics_table, name="statistics")
-        )
-        return layout
+        
+        return Layout(Columns([model_table, statistics_table], padding=(0,3)))
 
     def view(self, update=False):
         if update:
@@ -90,7 +87,7 @@ class CommandInterface:
         command_table = self.build_table()
 
         for index_value, command_value in enumerate(self.commands):
-            index = Text(str(index_value))
+            index = f"{index_value + 1}. "
 
             if cursor == index_value:
                 command = Text(command_value, style="yellow")
@@ -109,14 +106,14 @@ class CommandInterface:
 
 class View:
     def __init__(self, model:Model, commands:list[str]):
-        self.cursor_max = len(commands)
+        self.cursor_max = len(commands) - 1
         self.commands = commands
         self.model_interface = ModelInterface(model)
         self.command_interface = CommandInterface(self.commands)
 
     def build_main(self, cursor:int):
         layout = Layout()
-        layout.split_row(
+        layout.split_column(
             self.model_interface.view(),
             self.command_interface.view(cursor)
         )

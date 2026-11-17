@@ -33,14 +33,40 @@ class Model:
         self.data = self.read_data(file_path)
         self.index = self.make_index(self.data)
         self.empty = not bool(self.data)
-        self.statistics = self.make_statistics(self.data)
+        self.statistics = self.make_statistics()
         self.assign_scores()
 
     def assign_scores(self):
-        for subscription in self.data.values():
-            score = round(((self.statistics["total"] - subscription.monthly_expense) / self.statistics["total"]) * 100, 3)
+        total = self.statistics["total"]
 
-            subscription.set("cost_score", score)
+        for subscription in self.data.values():
+            score = (1 - (total - subscription.monthly_expense)/total) * 100
+
+            subscription.set("cost_score", round(score, 3))
+
+    def make_statistics(self) -> dict[str, float]:
+        if self.empty:
+            return {}
+
+        buffer = {}
+
+        expenses = [subscription.monthly_expense for subscription in self.data.values()]
+
+        total = sum(expenses)
+        mean = round(stat.mean(expenses),3)
+        standard_deviation = round(stat.stdev(expenses), 3) if len(self.data) > 2 else 0
+        minimum = min(expenses)
+        maximum = max(expenses)
+
+        buffer.update({
+            "total": total,
+            "mean": mean,
+            "standard deviation": standard_deviation,
+            "minimum": minimum,
+            "maximum": maximum
+        })
+
+        return buffer
 
     def get_table_values(self):
         return self.data.values()
@@ -94,6 +120,9 @@ class Model:
 
     @staticmethod
     def read_data(file_path:Path) -> dict[int, Subscription]:
+        if not file_path.exists():
+            return {}
+
         data:dict[int, Subscription] = {}
 
         buffer:list[dict] = []
@@ -120,29 +149,7 @@ class Model:
         with open(file_path, "w") as file:
             json.dump(buffer, file)     
 
-    @staticmethod
-    def make_statistics(data:dict[int, Subscription]) -> dict[str, float]:
-        buffer = {}
-
-        expenses = [subscription.monthly_expense for subscription in data.values()]
-
-        total = sum(expenses)
-        mean = round(stat.mean(expenses),3)
-        standard_deviation = round(stat.stdev(expenses), 3)
-        minimum = min(expenses)
-        maximum = max(expenses)
-
-        buffer.update({
-            "total": total,
-            "mean": mean,
-            "standard_deviation": standard_deviation,
-            "minimum": minimum,
-            "maximum": maximum
-        })
-
-        return buffer
-
-        
+   
 
 
         
