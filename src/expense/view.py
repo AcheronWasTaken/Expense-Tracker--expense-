@@ -5,6 +5,10 @@ from rich.text import Text
 from rich.live import Live
 from keyboard import read_event
 from rich.columns import Columns
+from .forms import Form
+from rich.console import Console
+
+console = Console()
 
 class ModelInterface:
     def __init__(self, model:Model):
@@ -30,7 +34,7 @@ class ModelInterface:
         model_table = self.build_table([
             "Name",
             "Expense ($)",
-            "Score (%)"
+            "Relative Cost (%)"
         ])
 
         for subscription in self.model.get_table_values():
@@ -62,11 +66,8 @@ class ModelInterface:
         
         return Layout(Columns([model_table, statistics_table], padding=(0,3)))
 
-    def view(self, update=False):
-        if update:
-            self.layout = self.build_layout()
-
-        return self.layout
+    def view(self) -> Layout:
+        return self.build_layout()
         
 
 class CommandInterface:
@@ -119,12 +120,18 @@ class View:
         )
         return layout
 
+    def fill_form(self, form:Form, pre_message:str=""):
+        console.print(Text(pre_message, style="red"))
+
+        for name in form.get_fields():
+            form.ask(name, console=console)
+
     def main(self) -> str:
         cursor = 0
 
         layout = self.build_main(cursor)
 
-        with Live(layout, auto_refresh=False, transient=True) as live:
+        with Live(layout, auto_refresh=False, transient=True, console=console) as live:
             while True:
                 event = read_event(suppress=True)
 

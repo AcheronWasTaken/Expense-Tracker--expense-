@@ -3,6 +3,9 @@ import json
 from typing import Literal
 import statistics as stat
 
+class OverMaximumBoundary(Exception):
+    pass
+
 class SubscriptionExists(Exception):
     pass
 
@@ -38,11 +41,27 @@ class Model:
 
     def assign_scores(self):
         total = self.statistics["total"]
+        minimum = self.statistics["minimum"]
+        maximum = self.statistics["maximum"]
+        mean = self.statistics["mean"]
+        standard_deviation = self.statistics["standard deviation"]
 
         for subscription in self.data.values():
-            score = (1 - (total - subscription.monthly_expense)/total) * 100
+            composition_score = (1 - (total - subscription.monthly_expense)/total) * 100
+            distance_from_min = ((subscription.monthly_expense - minimum)/(maximum-minimum))*100
+
+            composition_score = self.transform_non_linear(composition_score)
+            distance_from_min = self.transform_non_linear(distance_from_min)
+
+            score = (composition_score + distance_from_min) / 2
 
             subscription.set("cost_score", round(score, 3))
+
+    def update_metadata_and_file(self):
+        self.statistics = self.make_statistics()
+        self.assign_scores()
+
+        self.write_data(self.file_path, self.data)
 
     def make_statistics(self) -> dict[str, float]:
         if self.empty:
@@ -74,8 +93,6 @@ class Model:
     def find_subscription(self, name:str, ret:bool=False) -> Subscription|bool:
         hash_value = self.index.get(name)
 
-        print(self.index)
-
         if hash_value and ret:
             return self.data[hash_value]
 
@@ -97,11 +114,18 @@ class Model:
 
         self.empty = False
 
+        self.update_metadata_and_file()
+
     def remove_subscription(self, name:str):
         if not name in self.index:
             raise SubscriptionNotFound(f"No subscription with name {name} exists")
 
         del self.data[self.index[name]]
+
+        if not self.data:
+            self.empty = True
+
+        self.update_metadata_and_file()
 
     def update_subscription(self, name:str, key:str, value:str|float):
         if not name in self.index:
@@ -112,6 +136,8 @@ class Model:
 
         if key == "name" and isinstance(value, str):
             self.index[value] = self.index.pop(name)
+
+        self.update_metadata_and_file()
 
     @staticmethod
     def make_index(data:dict[int, Subscription]) -> dict[str, int]:
@@ -163,7 +189,19 @@ class Model:
             buffer.append(subscription.get_raw())
 
         with open(file_path, "w") as file:
-            json.dump(buffer, file)     
+            json.dump(buffer, file)   
+
+    @staticmethod
+    def transform_non_linear(percentage:float, max:float=300, exponent:float=2.6):
+        if percentage > 100:
+            raise Exception(f"Percentage ({percentage}) is somehow higher than expected.")
+
+        divisor = 100/((max)**(1/2.6))
+
+        if divisor < 1:
+            raise OverMaximumBoundary("Boundary is set higher than the maximum value of the function")
+
+        return (percentage/divisor) ** exponent
 
    
 
