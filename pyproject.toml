@@ -3,10 +3,17 @@ name = "expense"
 version = "1.0.0"
 description = "Expense tracker tool"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "click==8.5.1",
+    "keyboard==0.13.5",
+    "rich==15.0.0"
+]
 
 [project.scripts]
 hello = "expense.main:cli"
+
+[tool.flit.sdist]
+exclude = ["src/expense/data"]
 
 [build-system]
 requires = ["flit_core<4"]
