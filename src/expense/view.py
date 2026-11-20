@@ -41,7 +41,7 @@ class ModelInterface:
             name = subscription.name
             expense = Text(str(subscription.monthly_expense), style="cyan")
 
-            if subscription.cost_score <= 50:
+            if subscription.cost_score < 50:
                 score_color = "green"
             elif subscription.cost_score <= 75:
                 score_color = "yellow"

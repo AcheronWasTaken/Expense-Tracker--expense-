@@ -40,6 +40,9 @@ class Model:
         self.assign_scores()
 
     def assign_scores(self):
+        if self.empty:
+            return
+
         total = self.statistics["total"]
         minimum = self.statistics["minimum"]
         maximum = self.statistics["maximum"]
@@ -47,14 +50,8 @@ class Model:
         standard_deviation = self.statistics["standard deviation"]
 
         for subscription in self.data.values():
-            composition_score = (1 - (total - subscription.monthly_expense)/total) * 100
-            distance_from_min = ((subscription.monthly_expense - minimum)/(maximum-minimum))*100
-
-            composition_score = self.transform_non_linear(composition_score)
-            distance_from_min = self.transform_non_linear(distance_from_min)
-
-            score = (composition_score + distance_from_min) / 2
-
+            score = stat.NormalDist(mu=mean, sigma=standard_deviation).cdf(subscription.monthly_expense * 1.25) * 100
+            
             subscription.set("cost_score", round(score, 3))
 
     def update_metadata_and_file(self):
@@ -80,7 +77,7 @@ class Model:
         buffer.update({
             "total": total,
             "mean": mean,
-            "standard deviation": standard_deviation,
+            "standard deviation": standard_deviation or 1,
             "minimum": minimum,
             "maximum": maximum
         })
@@ -121,6 +118,7 @@ class Model:
             raise SubscriptionNotFound(f"No subscription with name {name} exists")
 
         del self.data[self.index[name]]
+        del self.index[name]
 
         if not self.data:
             self.empty = True
@@ -185,23 +183,18 @@ class Model:
     def write_data(file_path:Path, data:dict[int, Subscription]):
         buffer = []
 
+        file_path.parent.mkdir(exist_ok=True, parents=True)
+
         for subscription in data.values():
             buffer.append(subscription.get_raw())
 
         with open(file_path, "w") as file:
-            json.dump(buffer, file)   
+            json.dump(buffer, file, indent=4)
 
-    @staticmethod
-    def transform_non_linear(percentage:float, max:float=300, exponent:float=2.6):
-        if percentage > 100:
-            raise Exception(f"Percentage ({percentage}) is somehow higher than expected.")
 
-        divisor = 100/((max)**(1/2.6))
 
-        if divisor < 1:
-            raise OverMaximumBoundary("Boundary is set higher than the maximum value of the function")
 
-        return (percentage/divisor) ** exponent
+        
 
    
 
