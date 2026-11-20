@@ -32,6 +32,7 @@ class Controller:
             name = form.get("name")
             if self.model.find_subscription(name): #type:ignore
                 error_message = "A subscription with that name already exists."
+                form.reset()
                 continue
             break
 
@@ -63,6 +64,7 @@ class Controller:
 
             if not self.model.find_subscription(form.get("name")): #type:ignore
                 error_message = "Could not find a subscription with the name"
+                form.reset()
                 continue
             break
 
@@ -80,7 +82,61 @@ class Controller:
         self.model.remove_subscription(form.get("name")) #type:ignore
 
     def update_subscription(self):
-        pass
+        error_message = ""
+
+        choose_subscription = Form()
+        choose_subscription.add_field("name", "Subscription Name", "str")
+
+        choose_field = Form()
+        choose_field.add_field("field_name", "What would you like to change?", "str", choices=["name", "expense"])
+
+        name = ""
+        while True:
+            self.view.fill_form(choose_subscription, pre_message=error_message)
+
+            if not choose_subscription.completed:
+                raise FormNotCompleted
+
+            name = choose_subscription.get("name")
+            if not self.model.find_subscription(name): #type:ignore
+                error_message = "A subscription with that name doesn't exist."
+                choose_subscription.reset()
+                continue
+            break
+
+        self.view.fill_form(choose_field)
+        field = choose_field.get("field_name")
+
+        if field == "expense":
+            change_expense = Form()
+            change_expense.add_field("duration", "Duration of the expense", "str", choices=["daily", "monthly", "yearly"])
+            change_expense.add_field("expense", "Expense Amount", "float")
+
+            self.view.fill_form(change_expense)
+
+            duration = change_expense.get("duration")
+            expense = change_expense.get("expense")
+
+            self.model.update_subscription(name, "monthly_expense", expense, duration=duration) #type:ignore
+            return
+
+        if field == "name":
+            change_name = Form()
+            change_name.add_field("new_name", "New Name", "str")
+
+            while True:
+                self.view.fill_form(change_name, error_message)
+
+                new_name = change_name.get("new_name")
+
+                if self.model.find_subscription(new_name): #type:ignore
+                    error_message = "A subscription with that name already exists."
+                    change_name.reset()
+                    continue
+
+                self.model.update_subscription(name, field, new_name) #type:ignore
+                break 
+
 
     def exit(self):
         raise Abort

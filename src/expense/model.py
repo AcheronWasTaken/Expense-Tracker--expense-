@@ -125,9 +125,12 @@ class Model:
 
         self.update_metadata_and_file()
 
-    def update_subscription(self, name:str, key:str, value:str|float):
+    def update_subscription(self, name:str, key:str, value:str|float, duration:Literal["daily", "monthly", "yearly"]="monthly"):
         if not name in self.index:
             raise SubscriptionNotFound(f"No subscription with name {name} exists")
+
+        if key == "monthly_expense" and isinstance(value, float):
+            value = self.format_expense(value, duration)
 
         subscription = self.data[self.index[name]]
         subscription.set(key, value)

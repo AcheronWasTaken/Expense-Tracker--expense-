@@ -7,6 +7,7 @@ from keyboard import read_event
 from rich.columns import Columns
 from .forms import Form
 from rich.console import Console
+from rich import box
 
 console = Console()
 
@@ -16,11 +17,11 @@ class ModelInterface:
         self.layout = self.build_layout()
 
     @staticmethod
-    def build_table(headers:list, grid:bool=False):
+    def build_table(headers:list, style=None, grid:bool=False, ):
         if grid:
             table = Table.grid()
         else:
-            table = Table()
+            table = Table(box=style)
 
         for header in headers:
             table.add_column(header)
@@ -34,8 +35,9 @@ class ModelInterface:
         model_table = self.build_table([
             "Name",
             "Expense ($)",
-            "Relative Cost (%)"
-        ])
+            "Relative Cost (%)" ],
+            style=box.SIMPLE_HEAD
+        )
 
         for subscription in self.model.get_table_values():
             name = subscription.name
