@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [project.scripts]
-hello = "expense.main:cli"
+expense = "expense.main:cli"
 
 [tool.flit.sdist]
 exclude = ["src/expense/data"]
